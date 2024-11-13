@@ -1,5 +1,7 @@
 package server;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import framework.response.JsonResponse;
 import framework.response.Response;
 import framework.request.enums.Method;
@@ -19,11 +21,12 @@ public class ServerThread implements Runnable{
     private BufferedReader in;
     private PrintWriter out;
     private RouteHandler routeHandler;  // dodajemo RouteHandler
+    private final Gson gson;
 
     public ServerThread(Socket socket, RouteHandler routeHandler) {  // modifikujemo konstruktor
         this.socket = socket;
         this.routeHandler = routeHandler;
-
+        this.gson = new Gson();
         try {
             in = new BufferedReader(
                     new InputStreamReader(
@@ -68,34 +71,63 @@ public class ServerThread implements Runnable{
             return null;
         }
 
+        System.out.println("Received command: " + command);  // debug
+
         String[] actionRow = command.split(" ");
         Method method = Method.valueOf(actionRow[0]);
         String route = actionRow[1];
         Header header = new Header();
         HashMap<String, String> parameters = Helper.getParametersFromRoute(route);
 
-        do {
-            command = in.readLine();
-            String[] headerRow = command.split(": ");
-            if(headerRow.length == 2) {
-                header.add(headerRow[0], headerRow[1]);
-            }
-        } while(!command.trim().equals(""));
-
-        if(method.equals(Method.POST)) {
-            int contentLength = Integer.parseInt(header.get("content-length"));
-            char[] buff = new char[contentLength];
-            in.read(buff, 0, contentLength);
-            String parametersString = new String(buff);
-
-            HashMap<String, String> postParameters = Helper.getParametersFromString(parametersString);
-            for (String parameterName : postParameters.keySet()) {
-                parameters.put(parameterName, postParameters.get(parameterName));
+        // Čitamo headere
+        StringBuilder bodyBuilder = new StringBuilder();
+        String line;
+        while (!(line = in.readLine()).isEmpty()) {
+            System.out.println("Header line: " + line);  // debug
+            if (line.contains(": ")) {
+                String[] headerParts = line.split(": ", 2);
+                header.add(headerParts[0], headerParts[1]);
             }
         }
 
-        Request request = new Request(method, route, header, parameters);
+        // Za POST zahteve, čitamo body
+        if (method.equals(Method.POST)) {
+            String contentType = header.get("Content-Type");
+            String contentLengthStr = header.get("Content-Length");
 
-        return request;
+            if (contentLengthStr != null) {
+                int contentLength = Integer.parseInt(contentLengthStr);
+                char[] bodyChars = new char[contentLength];
+                in.read(bodyChars, 0, contentLength);
+                String body = new String(bodyChars);
+
+                System.out.println("Received body: " + body);  // debug
+
+                if (contentType != null && contentType.contains("application/json")) {
+                    try {
+                        TypeToken<Map<String, Object>> typeToken = new TypeToken<Map<String, Object>>() {};
+                        Map<String, Object> jsonMap = gson.fromJson(body, typeToken.getType());
+                        for (Map.Entry<String, Object> entry : jsonMap.entrySet()) {
+                            // Konvertuj double u int ako je broj
+                            if (entry.getValue() instanceof Double) {
+                                double value = (Double) entry.getValue();
+                                parameters.put(entry.getKey(), String.valueOf((int)value));
+                            } else {
+                                parameters.put(entry.getKey(), String.valueOf(entry.getValue()));
+                            }
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        throw new RequestNotValidException("Invalid JSON body: " + e.getMessage());
+                    }
+                }
+                 else {
+                    parameters.putAll(Helper.getParametersFromString(body));
+                }
+            }
+        }
+
+
+        return new Request(method, route, header, parameters);
     }
 }

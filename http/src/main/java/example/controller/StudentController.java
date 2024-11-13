@@ -23,7 +23,8 @@ public class StudentController {
     @GET
     @Path("/students/{id}")
     public Response getStudent(Request request) {
-        String id = request.getParameter("id");
+        // ID je deo URL putanje, ne query parametar
+        String id = request.getLocation().split("/")[2];  // uzimamo ID iz URL-a
         Student student = studentService.getStudent(id);
         if (student == null) {
             return new JsonResponse(Map.of("error", "Student not found"));

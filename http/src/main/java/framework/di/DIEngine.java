@@ -27,33 +27,38 @@ public class DIEngine {
 
     //  Initialize all dependencies at startup
 
-    public void initializeDependencies(List<Class<?>> classes, List<Class<?>> serviceClasses, List<Class<?>> componentClasses, List<Class<?>> qualifiedClasses) {
+    public void initializeDependencies(List<Class<?>> beanClasses,
+                                       List<Class<?>> serviceClasses,
+                                       List<Class<?>> componentClasses,
+                                       List<Class<?>> qualifiedClasses) {
         System.out.println("\n=== Initializing Dependencies ===");
 
-        // First pass: Register qualified implementations
+        // Register qualified implementations
         System.out.println("\nRegistering Qualified implementations:");
-        classes.stream()
-                .filter(clazz -> clazz.isAnnotationPresent(Qualifier.class))
-                .forEach(this::registerQualifiedClass);
+        for (Class<?> clazz : qualifiedClasses) {
+            registerQualifiedClass(clazz);
+        }
 
-        // Second pass: Initialize services
+        // Initialize services
         System.out.println("\nInitializing Services:");
-        classes.stream()
-                .filter(clazz -> clazz.isAnnotationPresent(Service.class))
-                .forEach(this::initializeSingleton);
+        for (Class<?> clazz : serviceClasses) {
+            initializeSingleton(clazz);
+        }
 
-        // Third pass: Initialize singleton beans
+        // Initialize singleton beans
         System.out.println("\nInitializing Singleton Beans:");
-        classes.stream()
-                .filter(this::isSingletonBean)
-                .forEach(this::initializeSingleton);
+        for (Class<?> clazz : beanClasses) {
+            if (isSingletonBean(clazz)) {
+                initializeSingleton(clazz);
+            }
+        }
 
-        // Log components (prototype scope)
+        // Log components
         System.out.println("\nDiscovered Components (prototype scope):");
-        classes.stream()
-                .filter(clazz -> clazz.isAnnotationPresent(Component.class))
-                .forEach(clazz -> System.out.println("Found Component: " + clazz.getSimpleName() +
-                        " (will be initialized on demand)"));
+        for (Class<?> clazz : componentClasses) {
+            System.out.println("Found Component: " + clazz.getSimpleName() +
+                    " (will be initialized on demand)");
+        }
     }
 
     private void registerQualifiedClass(Class<?> clazz) {
@@ -134,12 +139,13 @@ public class DIEngine {
 
 
     //  Inject dependencies into an existing instance
-
     private void injectDependencies(Object instance) throws Exception {
         Class<?> clazz = instance.getClass();
+        System.out.println("Injecting dependencies for: " + clazz.getName());
 
         for (Field field : clazz.getDeclaredFields()) {
             if (field.isAnnotationPresent(Autowired.class)) {
+                System.out.println("Found @Autowired field: " + field.getName());
                 injectField(instance, field);
             }
         }
@@ -148,13 +154,16 @@ public class DIEngine {
 
     //  Inject a specific field
     private void injectField(Object instance, Field field) throws Exception {
+        System.out.println("Injecting field: " + field.getName() + " in " + instance.getClass().getName());
         Autowired autowired = field.getAnnotation(Autowired.class);
         Class<?> fieldType = field.getType();
 
         // Verify the field type is injectable
         if (!isInjectableType(fieldType)) {
-            throw new InvalidAutowiredTargetException("Field " + field.getName() +
-                    " in " + instance.getClass().getName() + " is not a valid injectable type");
+            throw new InvalidAutowiredTargetException(
+                    "Field " + field.getName() + " in " + instance.getClass().getName() +
+                            " is not a valid injectable type"
+            );
         }
 
         // Get implementation class if it's an interface
@@ -162,20 +171,20 @@ public class DIEngine {
         if (fieldType.isInterface()) {
             Qualifier qualifier = field.getAnnotation(Qualifier.class);
             if (qualifier == null) {
-                throw new MissingQualifierException("Missing @Qualifier for interface field " +
-                        field.getName() + " in " + instance.getClass().getName());
+                throw new MissingQualifierException(
+                        "Missing @Qualifier for interface field " + field.getName() +
+                                " in " + instance.getClass().getName()
+                );
             }
             implementationClass = container.getImplementationClass(fieldType, qualifier.value());
         }
 
-        // Create or get the dependency instance
+        System.out.println("Creating dependency instance of type: " + implementationClass.getName());
         Object dependency = instantiate(implementationClass);
 
-        // Inject the dependency
         field.setAccessible(true);
         field.set(instance, dependency);
 
-        // Log if verbose is enabled
         if (autowired.verbose()) {
             logInjection(instance, field, dependency);
         }
