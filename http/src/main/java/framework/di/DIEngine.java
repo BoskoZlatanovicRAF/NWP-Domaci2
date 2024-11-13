@@ -10,8 +10,8 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 /**
- * Handles dependency injection using reflection.
- * Responsible for creating and injecting instances of classes.
+  Handles dependency injection using reflection.
+  Responsible for creating and injecting instances of classes.
  */
 public class DIEngine {
     private final DependencyContainer container;
@@ -24,9 +24,9 @@ public class DIEngine {
         this.controllerInstances = new HashMap<>();
     }
 
-    /**
-     * Initialize all dependencies at startup
-     */
+
+    //  Initialize all dependencies at startup
+
     public void initializeDependencies(List<Class<?>> classes, List<Class<?>> serviceClasses, List<Class<?>> componentClasses, List<Class<?>> qualifiedClasses) {
         System.out.println("\n=== Initializing Dependencies ===");
 
@@ -80,9 +80,9 @@ public class DIEngine {
         }
     }
 
-    /**
-     * Create or get an instance of a class with all dependencies injected
-     */
+
+   // Create or get an instance of a class with all dependencies injected
+
     public Object instantiate(Class<?> clazz) throws Exception {
         // Check for circular dependencies
         if (!beingInstantiated.add(clazz)) {
@@ -132,9 +132,9 @@ public class DIEngine {
         });
     }
 
-    /**
-     * Inject dependencies into an existing instance
-     */
+
+    //  Inject dependencies into an existing instance
+
     private void injectDependencies(Object instance) throws Exception {
         Class<?> clazz = instance.getClass();
 
@@ -145,9 +145,8 @@ public class DIEngine {
         }
     }
 
-    /**
-     * Inject a specific field
-     */
+
+    //  Inject a specific field
     private void injectField(Object instance, Field field) throws Exception {
         Autowired autowired = field.getAnnotation(Autowired.class);
         Class<?> fieldType = field.getType();
@@ -182,9 +181,8 @@ public class DIEngine {
         }
     }
 
-    /**
-     * Check if a class should be treated as a singleton
-     */
+
+    //  Check if a class should be treated as a singleton
     private boolean isSingleton(Class<?> clazz) {
         if (clazz.isAnnotationPresent(Controller.class) ||
                 clazz.isAnnotationPresent(Service.class)) {
@@ -193,9 +191,7 @@ public class DIEngine {
         return isSingletonBean(clazz);
     }
 
-    /**
-     * Check if a class is a singleton-scoped bean
-     */
+
     private boolean isSingletonBean(Class<?> clazz) {
         if (clazz.isAnnotationPresent(Bean.class)) {
             return "singleton".equals(clazz.getAnnotation(Bean.class).scope());
@@ -203,9 +199,6 @@ public class DIEngine {
         return false;
     }
 
-    /**
-     * Check if a type can be injected
-     */
     private boolean isInjectableType(Class<?> type) {
         return type.isAnnotationPresent(Bean.class) ||
                 type.isAnnotationPresent(Service.class) ||
@@ -213,9 +206,8 @@ public class DIEngine {
                 type.isInterface(); // Interfaces are injectable with @Qualifier
     }
 
-    /**
-     * Log injection details when verbose is true
-     */
+
+    //  Log injection details when verbose is true
     private void logInjection(Object instance, Field field, Object dependency) {
         System.out.printf(
                 "Initialized %s %s in %s on %s with %d%n",
@@ -226,10 +218,6 @@ public class DIEngine {
                 dependency.hashCode()
         );
     }
-
-    /**
-     * Get a controller instance (for route handling)
-     */
     public Object getController(Class<?> controllerClass) throws Exception {
         return getControllerInstance(controllerClass);
     }

@@ -3,10 +3,12 @@ package framework.discovery;
 import framework.annotations.*;
 import framework.di.DIEngine;
 import framework.route.RouteHandler;
-import framework.request.enums.Method;
+//import framework.request.enums.Method;
+import java.lang.reflect.Method;
 import framework.request.exceptions.DependencyResolutionException;
 
 import java.io.File;
+import java.net.URL;
 import java.util.*;
 
 public class DiscoveryMechanism {
@@ -62,26 +64,30 @@ public class DiscoveryMechanism {
             String targetPath = projectDir + File.separator + "target" + File.separator + "classes" + File.separator
                     + packageName.replace('.', File.separatorChar);
 
+            System.out.println("Scanning directory: " + targetPath);  // dodaj ovo
+
             File targetDir = new File(targetPath);
             if (targetDir.exists()) {
+                System.out.println("Directory exists, scanning...");  // i ovo
                 scanDirectory(targetDir, packageName);
             } else {
-                throw new DependencyResolutionException("Target directory not found: " + targetPath);
+                System.out.println("Directory does not exist!");  // i ovo
             }
         } catch (Exception e) {
-            throw new DependencyResolutionException("Error finding classes: " + e.getMessage());
+            e.printStackTrace();  // promeni ovo da vidimo pun stack trace
         }
     }
 
     private void scanDirectory(File directory, String packageName) {
+        System.out.println("Scanning directory: " + directory.getAbsolutePath());  // dodaj ovo
         File[] files = directory.listFiles();
         if (files != null) {
             for (File file : files) {
                 if (file.isDirectory()) {
                     scanDirectory(file, packageName + "." + file.getName());
                 } else if (file.getName().endsWith(".class")) {
-                    processClass(packageName + "." +
-                            file.getName().substring(0, file.getName().length() - 6));
+                    System.out.println("Found class file: " + file.getName());  // i ovo
+                    processClass(packageName + "." + file.getName().substring(0, file.getName().length() - 6));
                 }
             }
         }
