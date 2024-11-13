@@ -7,6 +7,7 @@ import framework.request.Header;
 import framework.request.Helper;
 import framework.request.Request;
 import framework.request.exceptions.RequestNotValidException;
+import framework.route.RouteHandler;
 
 import java.io.*;
 import java.net.Socket;
@@ -14,13 +15,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class ServerThread implements Runnable{
-
     private Socket socket;
     private BufferedReader in;
     private PrintWriter out;
+    private RouteHandler routeHandler;  // dodajemo RouteHandler
 
-    public ServerThread(Socket socket){
+    public ServerThread(Socket socket, RouteHandler routeHandler) {  // modifikujemo konstruktor
         this.socket = socket;
+        this.routeHandler = routeHandler;
 
         try {
             in = new BufferedReader(
@@ -36,9 +38,8 @@ public class ServerThread implements Runnable{
         }
     }
 
-    public void run(){
+    public void run() {
         try {
-
             Request request = this.generateRequest();
             if(request == null) {
                 in.close();
@@ -47,13 +48,8 @@ public class ServerThread implements Runnable{
                 return;
             }
 
-
-            // Response example
-            Map<String, Object> responseMap = new HashMap<>();
-            responseMap.put("route_location", request.getLocation());
-            responseMap.put("route_method", request.getMethod().toString());
-            responseMap.put("parameters", request.getParameters());
-            Response response = new JsonResponse(responseMap);
+            // Koristimo RouteHandler za obradu zahteva
+            Response response = routeHandler.handleRequest(request);
 
             out.println(response.render());
 
@@ -61,11 +57,11 @@ public class ServerThread implements Runnable{
             out.close();
             socket.close();
 
-        } catch (IOException | RequestNotValidException e) {
+        } catch (Exception e) {  // hvatamo sve izuzetke
             e.printStackTrace();
+            // možda bi trebalo poslati error response klijentu
         }
     }
-
     private Request generateRequest() throws IOException, RequestNotValidException {
         String command = in.readLine();
         if(command == null) {

@@ -9,10 +9,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Container that manages dependencies and their implementations.
- * Handles both interface-to-implementation mappings and singleton instances.
- */
 public class DependencyContainer {
     // Map for interface to implementation class mappings (with qualifiers)
     private final Map<Class<?>, Map<String, Class<?>>> interfaceToImplementation;
@@ -25,9 +21,8 @@ public class DependencyContainer {
         this.singletons = new ConcurrentHashMap<>();
     }
 
-    /**
-     * Register an implementation class for an interface with a qualifier
-     */
+
+     // Register an implementation class for an interface with a qualifier
     public void registerImplementation(Class<?> interfaceClass, String qualifier, Class<?> implementationClass) {
         interfaceToImplementation.computeIfAbsent(interfaceClass, k -> new HashMap<>());
 
@@ -41,9 +36,9 @@ public class DependencyContainer {
         interfaceToImplementation.get(interfaceClass).put(qualifier, implementationClass);
     }
 
-    /**
-     * Get implementation class for an interface using a qualifier
-     */
+
+    //  Get implementation class for an interface using a qualifier
+
     public Class<?> getImplementationClass(Class<?> interfaceClass, String qualifier) {
         Map<String, Class<?>> implementations = interfaceToImplementation.get(interfaceClass);
         if (implementations == null || !implementations.containsKey(qualifier)) {
@@ -55,32 +50,22 @@ public class DependencyContainer {
         return implementations.get(qualifier);
     }
 
-    /**
-     * Register a singleton instance
-     */
     public void registerSingleton(Class<?> clazz, Object instance) {
         singletons.put(clazz, instance);
     }
 
-    /**
-     * Get a singleton instance
-     */
     public Object getSingleton(Class<?> clazz) {
         return singletons.get(clazz);
     }
 
-    /**
-     * Check if a singleton exists
-     */
+
     public boolean hasSingleton(Class<?> clazz) {
         return singletons.containsKey(clazz);
     }
 
-    /**
-     * Clear all registrations (mainly for testing)
-     */
-    public void clear() {
-        interfaceToImplementation.clear();
-        singletons.clear();
-    }
+//
+//    public void clear() {
+//        interfaceToImplementation.clear();
+//        singletons.clear();
+//    }
 }
